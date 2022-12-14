@@ -22,7 +22,7 @@ function getInitialState() {
         const temp = localStorage.getItem(LOCAL_STORAGE_KEY);
         localStorageItem = JSON.parse(temp);
     } catch (e) {
-        console.log("Couldn't parse")
+        console.log("Couldn't parse");
     }
 
     if (!localStorageItem?.length) return generateShapes();
@@ -30,6 +30,8 @@ function getInitialState() {
     return localStorageItem;
 }
 
+let history = [];
+let historyStep = 0;
 
 const INITIAL_STATE = getInitialState();
 
@@ -55,6 +57,20 @@ function getStarCoordinates(star, eventTarget) {
     }
 }
 
+function getStarCoordinatesFromSavedItem(star, savedTarget) {
+    if (star.id === savedTarget.id) {
+        return {
+            x: savedTarget.x,
+            y: savedTarget.y,
+        }
+    } else {
+        return {
+            x: star.x,
+            y: star.y
+        }
+    }
+}
+
 const App = () => {
     const [stars, setStars] = React.useState(INITIAL_STATE);
 
@@ -69,7 +85,60 @@ const App = () => {
             })
         );
     };
+
+
+    const handleUndo = () => {
+        if (historyStep === 0) {
+          return;
+        }
+        historyStep -= 1;
+        const previous = history[historyStep];
+
+        setStars(
+            stars.map((star) => {
+                return {
+                    ...star,
+                    ...getStarCoordinatesFromSavedItem(star,previous),
+                    isDragging: false,
+                };
+            })
+        );
+      };
+    
+    const handleRedo = () => {
+        if (historyStep === 0 || historyStep === history.length - 1) {
+            return;
+        }
+        historyStep += 1;
+        const next = history[historyStep];
+
+        setStars(
+            stars.map((star) => {
+                return {
+                    ...star,
+                    ...getStarCoordinatesFromSavedItem(star,next),
+                    isDragging: false,
+                };
+            })
+        );
+    };
+
     const handleDragEnd = (e) => {
+        const id = e.target.id();
+
+        if(historyStep == 0){
+            const modifiedItem = stars.map((star)=>{
+                if(star.id === id) return star;
+                return null;
+            }).filter( el => {
+                return el !== null;
+            })[0];
+            history = history.concat([modifiedItem]);
+        }
+
+
+        history = history.slice(0, historyStep + 1 );
+
         setStars(
             stars.map((star) => {
                 return {
@@ -79,6 +148,24 @@ const App = () => {
                 };
             })
         );
+
+        const modifiedItem = stars.map((star)=>{
+            if(star.id === id){
+                return {
+                    ...star,
+                    ...getStarCoordinates(star, e.target),
+                    isDragging: false,
+                };
+            }
+            return null;
+        }).filter( el => {
+            return el !== null;
+          })[0];
+        history = history.concat([modifiedItem]);
+        historyStep += 1;
+
+        // console.log(history);
+        // console.log(historyStep);
     };
 
     useEffect(() => {
@@ -89,7 +176,9 @@ const App = () => {
     return (
         <Stage width={window.innerWidth} height={window.innerHeight}>
             <Layer>
-                <Text text='Try to drag a star'/>
+                <Text text="undo" onClick={handleUndo} />
+                <Text text="redo" x={40} onClick={handleRedo} />
+                {/* <Text text='Try to drag a star'/> */}
                 {stars.map((star) => (
                     <Star
                         key={star.id}
