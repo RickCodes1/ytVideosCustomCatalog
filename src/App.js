@@ -41,7 +41,47 @@ function generateShapes() {
 const INITIAL_STATE = generateShapes();
 
 const App = () => {
-  const [stars, setStars] = React.useState(INITIAL_STATE);
+
+  function copyInitialShapes(){
+    let starsQty = INITIAL_STATE.length;
+    return [...Array(starsQty)].map((_, i) => ({
+      id: INITIAL_STATE[i].id,
+      x: INITIAL_STATE[i].x,
+      y: INITIAL_STATE[i].y,
+    }));
+  }
+
+  const COPIED_FROM_INITIAL_STATE = copyInitialShapes();
+  
+  const LOCAL_STORAGE_KEY = "itemsPositions";
+
+  const [starsPositions, setStarsPositions] = React.useState((JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)).length == 0? null: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) ) ?? COPIED_FROM_INITIAL_STATE);
+
+  function restoreShapes(){
+    let starsQty = starsPositions.length;
+    return [...Array(starsQty)].map((_, i) => ({
+      id: starsPositions[i].id,
+      x: starsPositions[i].x,
+      y: starsPositions[i].y,
+      rotation: Math.random() * 180,
+      isDragging: false,
+    }));
+  }
+
+  const RESTORED_FROM_SAVED_STATE = (restoreShapes()).length === [].length? null : restoreShapes() ;
+
+  (()=>{
+    console.log((restoreShapes()).length)
+    console.log((restoreShapes()).length === [].length)
+    console.log(restoreShapes())
+    console.log((restoreShapes()).length === [].length? null : restoreShapes())
+    console.log(RESTORED_FROM_SAVED_STATE ?? INITIAL_STATE)
+
+  })();
+
+  const [stars, setStars] = React.useState(RESTORED_FROM_SAVED_STATE ?? INITIAL_STATE);
+  
+  //const [stars, setStars] = React.useState(INITIAL_STATE);
 
   const handleDragStart = (e) => {
     const id = e.target.id();
@@ -55,6 +95,14 @@ const App = () => {
     );
   };
   const handleDragEnd = (e) => {
+    alert(stars);
+    setStarsPositions(
+      starsPositions.map((star,j) => {
+        star.id = stars[j].id;
+        star.x = stars[j].x;
+        star.y = stars[j].y;
+      })
+    );
     setStars(
       stars.map((star) => {
         return {
@@ -63,12 +111,21 @@ const App = () => {
         };
       })
     );
+    
   };
 
+  React.useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(starsPositions));
+  }, [starsPositions]);
+
   return (
+    <div>
+    <div>{JSON.stringify(starsPositions)}</div>
+    <div>{JSON.stringify(stars)}</div>
     <Stage width={window.innerWidth} height={window.innerHeight}>
       <Layer>
-        <Text text="Try to drag a star" />
+        {/* <Text text="Try to drag a star" /> */}
+        <Text text={JSON.stringify(stars)} />
         {stars.map((star) => (
           <Star
             key={star.id}
@@ -95,7 +152,28 @@ const App = () => {
         ))}
       </Layer>
     </Stage>
+    </div>
   );
 };
+
+
+const YTVideoOverview = require("./model/YTVideoOverview.js");
+const mongoose = require('mongoose');
+const MONGODB_URI = "mongodb://0.0.0.0/ytVideosOverview00";
+
+
+// connection to db
+(async () => {
+  try {
+    const db = await mongoose.connect(MONGODB_URI);
+    console.log("Db connectect to", db.connection.name);
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
+
+
+
 
 export default App;
